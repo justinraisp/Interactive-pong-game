@@ -1,0 +1,4 @@
+S pomocjo videja igra za dva igralca, ali proti racunalniku. DOdatna funkcionalnost za zvok za nek dodatek k igri, še ni dodelana ideja
+
+
+S glasom spreminjas hitrost zogice, dodaj da igra ne igra, če ne moreš zaznat, obe roki, dodaj

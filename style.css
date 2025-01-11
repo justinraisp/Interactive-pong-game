@@ -1,0 +1,18 @@
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: black;
+    color: white;
+}
+
+canvas {
+    border: 2px solid white;
+    background: black;
+}
+
+video {
+    display: none; /* Skrij video, ker ga ne potrebuješ */
+}
