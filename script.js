@@ -23,6 +23,7 @@ let paddleB_previousY = paddleB.y; // Prejšnja pozicija za desni lopar
 
 let handsDetected = 0; // Keeps track of the number of hands detected
 let gameActive = false; // Indicates whether the game can run
+let countdownActive = false; // Ali trenutno poteka odštevanje
 
 let countdown = 0; // Odštevalnik (v sekundah)
 let countdownInterval = null; // Interval za odštevanje
@@ -159,16 +160,20 @@ hands.onResults((results) => {
 
     handsDetected = detectedHands.length;
 
-    if (handsDetected === 2) {
-        gameActive = true; // Activate game if two hands are detected
-        updatePaddlePosition(paddleA, detectedHands, paddleA.x, canvas.height, true);  // Levi lopar
-        updatePaddlePosition(paddleB, detectedHands, paddleB.x, canvas.height, false); // Desni lopar
-        
-    } else {
-        gameActive = false; // Deactivate game if less than two hands are detected
-    }
+  if (handsDetected === 2 && !gameActive && !countdownActive) {
+    startCountdown(); // Začni odštevanje
+  }
+  else if(handsDetected == 2){
+    updatePaddlePosition(paddleA, detectedHands, paddleA.x, canvas.height, true);  // Levi lopar
+    updatePaddlePosition(paddleB, detectedHands, paddleB.x, canvas.height, false); // Desni lopar
+  }
+  else {
+      drawWaitingMessage(false,0);
+      //stopCountdown(); // Prekini odštevanje, če manj kot 2 roki
+      gameActive = false; // Deaktiviraj igro
+  }
 
-    drawFingerPositions(detectedHands);
+  drawFingerPositions(detectedHands);
 });
 
 // Camera Setup for MediaPipe
@@ -180,6 +185,32 @@ const camera = new Camera(video, {
     height: 720
 });
 camera.start();
+
+
+function startCountdown() {
+  countdownActive = true;
+  countdown = 3; // Začetno število sekund
+
+  countdownTimer = setInterval(() => {
+      countdown--; // Zmanjšaj čas
+      if (countdown <= 0) {
+          clearInterval(countdownTimer);
+          countdownActive = false;
+          gameActive = true; // Aktiviraj igro
+          console.log("Odštevanje končano! Začnemo z igro.");
+      }
+  }, 1000);
+}
+
+
+// Funkcija za prekinitev odštevanja
+function stopCountdown() {
+  if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownActive = false;
+      console.log("Odštevanje prekinjeno.");
+  }
+}
 
 
 function drawBall() {
@@ -200,11 +231,19 @@ function drawScores() {
     ctx.fillText(score.B, (3 * canvas.width) / 4, 50);
 }
 
-function drawWaitingMessage() {
-    ctx.font = '48px Arial';
-    ctx.fillStyle = 'red';
-    ctx.textAlign = 'center';
-    ctx.fillText("Waiting for both hands...", canvas.width / 2, canvas.height / 2);
+function drawWaitingMessage(hands,time) {
+    if (hands) {
+        ctx.font = '48px Arial';
+        ctx.fillStyle = 'red';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Game starts in ${time}...`, canvas.width / 2, canvas.height / 2);
+    }
+    else {
+      ctx.font = '48px Arial';
+      ctx.fillStyle = 'red';
+      ctx.textAlign = 'center';
+      ctx.fillText("Waiting for both hands...", canvas.width / 2, canvas.height / 2);
+    }
 }
 
 function drawFingerPositions(hands) {
@@ -323,7 +362,6 @@ function update() {
     ball.y + ball.size / 2 >= obstacle.y && 
     ball.y - ball.size / 2 <= obstacle.y + obstacleHeight &&
     !obstacleHit) {
-      console.log("Žoga je zadela oviro!");
       obstacleHit = true;
       paddleAHit = false;
       paddleBHit = false;
@@ -403,30 +441,41 @@ function resetBall() {
 let lastTime = 0;
 const fps = 75;
 function gameLoop(time) {
-    let deltaTime = time - lastTime;
-    if (deltaTime > 1000 / fps) {
-        lastTime = time;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawCenterLine();
+  let deltaTime = time - lastTime;
+  if (deltaTime > 1000 / fps) {
+      lastTime = time;
 
-        if (gameActive) {
-            drawPaddle(paddleA);
-            drawPaddle(paddleB);
-            drawBall();
-            drawScores();
-            moveObstacle();  // Premakni ovire
-            drawObstacle();  // Nariši ovire
-            maybeCreateObstacle(); // Mogočnost za ustvarjanje nove ovire
-            update();
-        } else {
-            drawWaitingMessage(); // Show waiting message if less than two hands are detected
-            drawPaddle(paddleA);
-            drawPaddle(paddleB);
-            drawBall();
-            drawScores();
-            drawObstacle();
+      // Počisti platno
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Vedno nariši sredinsko črto
+      drawCenterLine();
+
+      if (gameActive) {
+          // Risanje igre, če je aktivna
+          drawPaddle(paddleA);
+          drawPaddle(paddleB);
+          drawBall();
+          drawScores();
+          moveObstacle();  // Premakni ovire
+          drawObstacle();  // Nariši ovire
+          maybeCreateObstacle(); // Možnost za ustvarjanje nove ovire
+          update();
         }
-    }
-    requestAnimationFrame(gameLoop);
+      else {
+          // Prikaži sporočilo "Waiting for both hands"
+          drawWaitingMessage(countdownActive, countdown);
+
+          // Risanje elementov igre (loparji, žoga, točke)
+          drawPaddle(paddleA);
+          drawPaddle(paddleB);
+          drawBall();
+          drawScores();
+          drawObstacle();
+      }
+  }
+
+  // Nadaljuj animacijo
+  requestAnimationFrame(gameLoop);
 }
 gameLoop(0);
