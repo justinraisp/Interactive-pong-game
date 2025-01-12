@@ -328,7 +328,6 @@ function update() {
       paddleAHit = false;
       paddleBHit = false;
       ball.dy *= -1; // Obrne vertikalno smer žoge
-      Math.random() < 0.5 ? -0.5 : -2;
   }
 
   // Preverjanje trkov z levim loparjem
@@ -340,7 +339,7 @@ function update() {
       paddleBHit = false;
       hitSound.play();
       ball.dx *= -1; // Obrne horizontalno smer žoge
-      Math.random() < 0.5 ? ball.dy *= 0.7 : ball.dy *= 1.3;
+      Math.random() < 0.5 ? ball.dy *= 0.92 : ball.dy /= 0.92;
 
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleA.height / 3;
@@ -363,7 +362,7 @@ function update() {
       paddleBHit = true;
       hitSound.play();
       ball.dx *= -1; // Obrne horizontalno smer žoge
-      Math.random() < 0.5 ? ball.dy *= 0.7 : ball.dy *= 1.3;
+      Math.random() < 0.5 ? ball.dy *= 0.92 : ball.dy /= 0.92;
 
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleB.height / 3;
