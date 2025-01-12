@@ -22,6 +22,8 @@
             border: 2px solid white;
             border-radius: 10px;
             background: rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 900px;
         }
         button {
             font-size: 20px;
@@ -38,22 +40,130 @@
             transform: scale(1.1);
             background-color: #b21f1f;
         }
+        .selected {
+            background-color: #b21f1f !important; /* Obarvana izbrana hitrost */
+            color: #fff !important;
+        }
+          .functionality-container {
+      display: flex;
+      justify-content: center; /* Centriraj vsebino horizontalno */
+      margin-top: 20px;
+  }
+
+  .functionality-column {
+      width: 45%;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* Centriraj vsebino znotraj vsakega bloka */
+      align-items: center; /* Poravnava vsebine na sredino znotraj vsakega bloka */
+      padding: 10px; /* Doda nekaj prostora okoli vsebine */
+  }
+  .functionality-option {
+    margin-top: 10px;
+    font-size: 18px;
+    display: flex;
+    justify-content: center; /* Poravnava izbirne opcije na sredino */
+}
+
+select {
+    font-size: 18px;
+    margin: 5px;
+    width: 100%; /* Da bo select gumb širši in poravnan */
+    max-width: 200px; /* Omejitev širine select polja */
+}
     </style>
 </head>
 <body>
     <div class="menu-container">
-        <h1>Welcome to the Game!</h1>
-        <p>Select a game to play:</p>
-        <button onclick="startPong()">Pong Game</button>
-        <button onclick="startAnotherGame()">Another Game (Coming Soon)</button>
+        <h1>Welcome to the Interactive Pong Game!</h1>
+        <p>Select game intensity:</p>
+
+        <!-- Button for selecting speed -->
+        <button id="slowBtn" onclick="selectSpeed('slow')">Slow Speed</button>
+        <button id="mediumBtn" onclick="selectSpeed('medium')">Medium Speed</button>
+        <button id="fastBtn" onclick="selectSpeed('fast')">Fast Speed</button>
+
+        <br><br>
+        <p>Select a unique functionality for each player:</p>
+        <!-- Left and Right Player Functionality Selections -->
+        <div class="functionality-container">
+            <!-- Left Player Functionalities -->
+            <div class="functionality-column">
+                <h3>Left Player:</h3>
+                <div class="functionality-option">
+                    <label for="leftFunction">Special Ability:</label>
+                    <select id="leftFunction">
+                        <option value="fasterHit">Faster Hit</option>
+                        <option value="invisibleBall">Invisible Ball</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Right Player Functionalities -->
+            <div class="functionality-column">
+                <h3>Right Player:</h3>
+                <div class="functionality-option">
+                    <label for="rightFunction">Special Ability:</label>
+                    <select id="rightFunction">
+                        <option value="fasterHit">Faster Hit</option>
+                        <option value="invisibleBall">Invisible Ball</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <br><br>
+        <button onclick="startPong()">Start Game</button>
     </div>
 
     <script>
-        function startPong() {
-            window.location.href = "pong.html"; // Redirect to Pong game
+        let selectedSpeed = '';
+        let leftPlayerFunction = '';
+        let rightPlayerFunction = '';
+
+        // Function to handle speed selection
+        function selectSpeed(speed) {
+            selectedSpeed = speed;
+            console.log("Selected speed: " + selectedSpeed);
+
+            // Reset all buttons and add 'selected' class to the clicked button
+            document.getElementById('slowBtn').classList.remove('selected');
+            document.getElementById('mediumBtn').classList.remove('selected');
+            document.getElementById('fastBtn').classList.remove('selected');
+
+            if (speed === 'slow') {
+                document.getElementById('slowBtn').classList.add('selected');
+            } else if (speed === 'medium') {
+                document.getElementById('mediumBtn').classList.add('selected');
+            } else if (speed === 'fast') {
+                document.getElementById('fastBtn').classList.add('selected');
+            }
         }
-        function startAnotherGame() {
-            alert("This game is not available yet. Stay tuned!");
+
+        // Function to handle functionality selection
+        function selectFunctionalities() {
+            // Left Player
+            leftPlayerFunction = document.getElementById('leftFunction').value;
+            // Right Player
+            rightPlayerFunction = document.getElementById('rightFunction').value;
+        }
+
+        // Function to start the Pong game and pass the settings to it
+        function startPong() {
+            if (selectedSpeed === '') {
+                alert("Please select a speed before starting the game!");
+            } else {
+                // Select functionalities for both players
+                selectFunctionalities();
+
+                // Store settings in localStorage
+                localStorage.setItem("pongSpeed", selectedSpeed);
+                localStorage.setItem("leftPlayerFunction", leftPlayerFunction);
+                localStorage.setItem("rightPlayerFunction", rightPlayerFunction);
+
+                window.location.href = "pong.html"; // Redirect to Pong game
+            }
         }
     </script>
 </body>
