@@ -15,6 +15,11 @@ let paddleA = { x: 15, y: canvas.height / 2 - paddleHeight / 2, width: paddleWid
 let paddleB = { x: canvas.width - 15 - paddleWidth, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight };
 let ball = { x: canvas.width / 2, y: canvas.height / 2, dx: 5, dy: 5, size: ballSize };
 let score = { A: 0, B: 0 };
+let paddleAHit = false; // Ali je bila žoga zadeta z levim loparjem
+let paddleBHit = false; // Ali je bila žoga zadeta z desnim loparjem
+
+let paddleA_previousY = paddleA.y; // Prejšnja pozicija za levi lopar
+let paddleB_previousY = paddleB.y; // Prejšnja pozicija za desni lopar
 
 let handsDetected = 0; // Keeps track of the number of hands detected
 let gameActive = false; // Indicates whether the game can run
@@ -41,6 +46,55 @@ function setBallSpeed() {
 }
 
 setBallSpeed();
+
+
+////////////////////////////
+// Ovire 
+
+let obstacle = {};  // Seznam ovir
+const obstacleWidth = 5;
+const obstacleHeight = 150;
+const obstacleSpeed = 1; // Hitrost gibanja ovir navzdol
+let obstacleHit = false; // Ali je žoga zadela oviro
+
+// Funkcija za ustvarjanje naključnih ovir na levi ali desni strani
+function createObstacle() {
+  // Določimo meje za sredinske dve četrtini zaslona
+  const quarterWidth = canvas.width / 4;
+  const middleStart = quarterWidth;  // Začetek sredinskega dela
+  const middleEnd = 3 * quarterWidth; // Konec sredinskega dela
+
+  // Naključno določimo pozicijo X znotraj sredinskega dela zaslona
+  const randomX = middleStart + Math.random() * (middleEnd - middleStart);  // Naključno med sredinskima četrtinama
+  const randomY = -obstacleHeight;
+
+  // Preverimo, ali že obstaja ovira na tej strani
+    obstacle = { x: randomX, y: randomY };
+}
+
+// Funkcija za risanje ovir
+function drawObstacle() {
+  ctx.fillStyle = '#ff6347'; // Barva ovir (rdeča)
+  ctx.fillRect(obstacle.x, obstacle.y, obstacleWidth, obstacleHeight);  // Nariši vsako oviro
+}
+
+// Funkcija za premikanje ovir
+function moveObstacle() {
+  obstacle.y += obstacleSpeed; // Premakni oviro navzdol
+
+  // Odstrani ovire, ki so šle izven zaslona
+  if (obstacle.y > canvas.height) {
+    obstacle = {}; // Remove the obstacle if it goes off the screen
+  }
+}
+
+// Funkcija za občasno ustvarjanje novih ovir
+function maybeCreateObstacle() {
+  if (!obstacle.x && !obstacle.y && Math.random() < 0.9) {  // 2% verjetnost, da se pojavi nova ovira vsak frame
+      createObstacle();
+  }
+}
+
 
 // MediaPipe Setup for Hand Tracking
 const video = document.getElementById('inputVideo');
@@ -87,7 +141,9 @@ function updatePaddlePosition(paddle, hands, paddleX, gameHeight, isLeftPaddle) 
 
   // Mapiranje y-koordinate roke na višino zaslona
   const handY = closestHand.y * gameHeight;
-  paddle.y = Math.max(0, Math.min(gameHeight - paddle.height, handY - paddle.height / 2));
+  targetY = handY - paddle.height / 2;
+  smoothedY = paddle.y * 0.4 + targetY * 0.6;
+  paddle.y = Math.max(0, Math.min(gameHeight - paddle.height, smoothedY));
 }
 
 
@@ -184,10 +240,6 @@ function drawPaddle(paddle) {
 }
 
 
-// Spremenljivke za spremljanje, ali je bil uporabljen poseben udarec
-let specialHitUsedLeft = false;
-let specialHitUsedRight = false;
-
 // Funkcija za posebne učinke (hitrejši udarec, spin, nevidna žoga, naključna smer)
 function applySpecialEffect(effectType, ball, paddle) {
   console.log("Applying special effect:", effectType); // Odstrani "upper/lower"
@@ -198,17 +250,14 @@ function applySpecialEffect(effectType, ball, paddle) {
       ball.dx = Math.sign(ball.dx) * speed * 1.25;
       setTimeout(() => {
         invisible = false;  // Po 1 sekundi nastavimo žogo spet na vidno
-    }, 15000/speed);
+    }, 14000/speed);
   }
 }
 
 // Ball Collision with Paddles
-function checkPaddleCollision() {
+function checkPaddleCollision(paddle) {
   // Levi lopar
-  if (
-      ball.x - ball.size / 2 <= paddleA.x + paddleA.width &&
-      ball.y + ball.size / 2>= paddleA.y &&
-      ball.y - ball.size / 2<= paddleA.y + paddleA.height
+  if ( paddle == "left"
   ) {
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleA.height / 3;
@@ -222,14 +271,10 @@ function checkPaddleCollision() {
         ball.dx = Math.sign(ball.dx) * speed
       }
       ball.dx *= -1; // Obrne horizontalno smer žoge
-      Math.random() < 0.5 ? ball.dy *= 0.75 : ball.dy *= 1.25;
   }
 
   // Desni lopar
-  if (
-      ball.x + ball.size / 2 >= paddleB.x &&
-      ball.y + ball.size >= paddleB.y &&
-      ball.y - ball.size <= paddleB.y + paddleB.height
+  if ( paddle == "right"
   ) {
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleB.height / 3;
@@ -243,7 +288,6 @@ function checkPaddleCollision() {
         ball.dx = Math.sign(ball.dx) * speed
       }
       ball.dx *= -1; // Obrne horizontalno smer žoge
-      Math.random() < 0.5 ? ball.dy *= 0.8 : ball.dy *= 1.2;
   }
 }
 
@@ -261,37 +305,93 @@ function drawCenterLine() {
 
 // Update Game Logic
 function update() {
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+  ball.x += ball.dx;
+  ball.y += ball.dy;
 
-    // Ball Collision with Top/Bottom
-    if (ball.y - ball.size / 2 <= 0 || ball.y + ball.size / 2 >= canvas.height) {
+  // Ball Collision with Top/Bottom
+  if (ball.y - ball.size / 2 <= 0 || ball.y + ball.size / 2 >= canvas.height) {
       ball.dy *= -1;
       wallSound.play();
-    }
+      obstacleHit = false;
+      paddleAHit = false;
+      paddleBHit = false;
+  }
+  // Preverjanje trkov z oviro
+  else if (obstacle.x && obstacle.y && 
+    ball.x + ball.size / 2 >= obstacle.x && 
+    ball.x - ball.size / 2 <= obstacle.x + obstacleWidth && 
+    ball.y + ball.size / 2 >= obstacle.y && 
+    ball.y - ball.size / 2 <= obstacle.y + obstacleHeight &&
+    !obstacleHit) {
+      console.log("Žoga je zadela oviro!");
+      obstacleHit = true;
+      paddleAHit = false;
+      paddleBHit = false;
+      ball.dy *= -1; // Obrne vertikalno smer žoge
+      Math.random() < 0.5 ? -0.5 : -2;
+  }
 
-    // Ball Collision with Paddles
-    if (
-        (ball.x - ball.size / 2 <= paddleA.x + paddleA.width &&
-            ball.y >= paddleA.y &&
-            ball.y <= paddleA.y + paddleA.height) ||
-        (ball.x + ball.size / 2 >= paddleB.x &&
-            ball.y >= paddleB.y &&
-            ball.y <= paddleB.y + paddleB.height)
-    ) {
+  // Preverjanje trkov z levim loparjem
+  else if (ball.x - ball.size / 2 <= paddleA.x + paddleA.width &&
+      ball.y >= paddleA.y && ball.y <= paddleA.y + paddleA.height &&
+      !paddleAHit) {
+      obstacleHit = false;
+      paddleAHit = true;
+      paddleBHit = false;
       hitSound.play();
-      checkPaddleCollision();
-    }
+      ball.dx *= -1; // Obrne horizontalno smer žoge
+      Math.random() < 0.5 ? ball.dy *= 0.7 : ball.dy *= 1.3;
 
-    // Scoring
-    if (ball.x <= 0) {
-        score.B++;
-        resetBall();
-    } else if (ball.x >= canvas.width) {
-        score.A++;
-        resetBall();
-    }
+      // Preverimo, ali je žoga zadela sredinski del loparja
+      const segmentHeight = paddleA.height / 3;
+      const relativeY = ball.y - paddleA.y;
+
+      if (relativeY > segmentHeight && relativeY < 2 * segmentHeight) {
+          applySpecialEffect(leftPlayerFunction, ball, 'left');
+      } else {
+          ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
+      }
+
+  }
+
+  // Preverjanje trkov z desnim loparjem
+  else if (ball.x + ball.size / 2 >= paddleB.x &&
+      ball.y >= paddleB.y && ball.y <= paddleB.y + paddleB.height &&
+      !paddleBHit) {
+      obstacleHit = false;
+      paddleAHit = false;
+      paddleBHit = true;
+      hitSound.play();
+      ball.dx *= -1; // Obrne horizontalno smer žoge
+      Math.random() < 0.5 ? ball.dy *= 0.7 : ball.dy *= 1.3;
+
+      // Preverimo, ali je žoga zadela sredinski del loparja
+      const segmentHeight = paddleB.height / 3;
+      const relativeY = ball.y - paddleB.y;
+
+      if (relativeY > segmentHeight && relativeY < 2 * segmentHeight) {
+          applySpecialEffect(rightPlayerFunction, ball, 'right');
+      } else {
+          ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
+      }
+  }
+
+  // Scoring
+  else if (ball.x <= 0) {
+      score.B++;
+      obstacleHit = false;
+      paddleAHit = false;
+      paddleBHit = false;  
+      resetBall();
+  } else if (ball.x >= canvas.width) {
+      score.A++;
+      obstacleHit = false;
+      paddleAHit = false;
+      paddleBHit = false; 
+      resetBall();
+  }
 }
+
 
 function resetBall() {
     ball.x = canvas.width / 2;
@@ -302,7 +402,7 @@ function resetBall() {
 
 // Game Loop
 let lastTime = 0;
-const fps = 60;
+const fps = 75;
 function gameLoop(time) {
     let deltaTime = time - lastTime;
     if (deltaTime > 1000 / fps) {
@@ -315,6 +415,9 @@ function gameLoop(time) {
             drawPaddle(paddleB);
             drawBall();
             drawScores();
+            moveObstacle();  // Premakni ovire
+            drawObstacle();  // Nariši ovire
+            maybeCreateObstacle(); // Mogočnost za ustvarjanje nove ovire
             update();
         } else {
             drawWaitingMessage(); // Show waiting message if less than two hands are detected
@@ -322,6 +425,7 @@ function gameLoop(time) {
             drawPaddle(paddleB);
             drawBall();
             drawScores();
+            drawObstacle();
         }
     }
     requestAnimationFrame(gameLoop);
