@@ -17,7 +17,7 @@ function adjustSize() {
   const paddleHeight = screenHeight * 0.25; // 20% višine zaslona
 
   // Nastavimo velikost žoge kot del širine zaslona
-  const ballSize = screenWidth * 0.028; // 5% širine zaslona
+  const ballSize = screenWidth * 0.025; // 5% širine zaslona
 
   const obstacleWidth = screenWidth * 0.0036;
   const obstacleHeight = screenHeight * 0.2;
@@ -27,7 +27,6 @@ function adjustSize() {
 
 // Klic funkcije za inicializacijo velikosti
 const { paddleWidth, paddleHeight, ballSize, obstacleWidth,obstacleHeight } = adjustSize();
-
 
 // Funkcija za prilagoditev velikosti ob spremembi velikosti okna
 window.addEventListener('resize', function() {
@@ -596,8 +595,6 @@ function update() {
       } else {
           ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
       }
-      console.log(speed);
-
   }
 
   // Preverjanje trkov z desnim loparjem
@@ -624,7 +621,6 @@ function update() {
       } else {
           ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
       }
-      console.log(speed);
   }
 
   // Scoring
@@ -728,6 +724,7 @@ function gameLoop(time) {
       
       if (gameEnd) {
         // Draw victory screen when game ends
+        drawScores();
         drawVictory(score.A > score.B ? 'Player A' : 'Player B');
       }
       else if (gameActive) {
