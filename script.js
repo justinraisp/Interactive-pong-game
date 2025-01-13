@@ -10,7 +10,7 @@ const ballSize = 30;
 let selectedSpeed = localStorage.getItem("pongSpeed") || 'medium'; // Privzeta hitrost je 'medium'
 let leftPlayerFunction = localStorage.getItem("leftPlayerFunction");
 let rightPlayerFunction = localStorage.getItem("rightPlayerFunction");
-let targetScore = localStorage.getItem("targetScore") || 1; // Privzeta vrednost je 5
+let targetScore = localStorage.getItem("targetScore") || 11; // Privzeta vrednost je 5
 
 let paddleA = { x: 15, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight };
 let paddleB = { x: canvas.width - 15 - paddleWidth, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight };
@@ -33,6 +33,12 @@ let countdownInterval = null; // Interval za odštevanje
 let invisible = false;
 let spin = false;
 let countdownTimer = null; 
+
+let currentGesture = null; // Trenutno zaznana gesta
+let gestureStartTime = null; // Čas začetka zaznavanja geste
+const gestureHoldDuration = 3000; // Trajanje v milisekundah (3 sekunde)
+const wiggleRoom = 50; // Prostor za odmik od roba zaslona
+const cropPercentage = 0.8;
 
 const hitSound = new Audio('sounds/hit.mp3');
 const wallSound = new Audio('sounds/wall.wav');
@@ -101,6 +107,20 @@ function maybeCreateObstacle() {
 }
 
 
+function mapToGameScreen(y_camera, gameHeight, cropPercentage) {
+  // Izračunaj zgornjo in spodnjo zarezo
+  const topCrop = Math.floor((1 - cropPercentage) / 2 * gameHeight);
+  const bottomCrop = Math.floor((1 + cropPercentage) / 2 * gameHeight);
+
+  // Preslika y-koordinate iz kamere v prostor igre
+  const relativeY = (y_camera - topCrop) / (bottomCrop - topCrop);
+  const gameY = Math.floor(relativeY * gameHeight);
+
+  // Prepreči, da bi y-koordinata presegla meje zaslona igre
+  return Math.max(0, Math.min(gameHeight, gameY));
+}
+
+
 // MediaPipe Setup for Hand Tracking
 const video = document.getElementById('inputVideo');
 const hands = new Hands({
@@ -139,13 +159,15 @@ function getClosestHand(hands, paddleX, isLeftPaddle) {
 
 
 // Update paddle position based on closest hand
-function updatePaddlePosition(paddle, hands, paddleX, gameHeight, isLeftPaddle) {
+function updatePaddlePosition(paddle, hands, paddleX, gameHeight, isLeftPaddle,cropPercentage) {
   const closestHand = getClosestHand(hands, paddleX, isLeftPaddle);
 
   if (!closestHand) return; // Če ni najdene ustrezne roke, ne premikaj loparja
 
   // Mapiranje y-koordinate roke na višino zaslona
-  const handY = closestHand.y * gameHeight;
+  // const handY = mapToGameScreen(closestHand.y * canvas.height, gameHeight, wiggleRoom);
+  //const handY = closestHand.y * gameHeight;
+  const handY = mapToGameScreen(closestHand.y * gameHeight, gameHeight, cropPercentage);
   targetY = handY - paddle.height / 2;
   smoothedY = paddle.y * 0.4 + targetY * 0.6;
   paddle.y = Math.max(0, Math.min(gameHeight - paddle.height, smoothedY));
@@ -260,12 +282,13 @@ hands.onResults((results) => {
     startCountdown(); // Začni odštevanje
   }
   else if(fingersDetected == 2 && !gameEnd){
-    updatePaddlePosition(paddleA, detectedFingers, paddleA.x, canvas.height, true);  // Levi lopar
-    updatePaddlePosition(paddleB, detectedFingers, paddleB.x, canvas.height, false); // Desni lopar
+    updatePaddlePosition(paddleA, detectedFingers, paddleA.x, canvas.height, true,cropPercentage);  // Levi lopar
+    updatePaddlePosition(paddleB, detectedFingers, paddleB.x, canvas.height, false,cropPercentage); // Desni lopar
   }
   else if(gameEnd && handsDetected > 0){
-    drawHandPosition(detectedHands);
-    detectHandGesture(Hands[0]);
+    drawHandPosition(detectedHands.slice(0,21));
+    const gesture = detectHandGesture(Hands[0]);
+    handleGesture(gesture);
     return
   }
   else {
@@ -278,13 +301,36 @@ hands.onResults((results) => {
 
 function detectHandGesture(hand) {
   if (!hand) return null;
-    const isFist = isHandClosed(hand);
-    const isOpenPalm = isHandOpen(hand);
-    console.log(isFist,isOpenPalm);
-    if (isFist) return 'fist';
-    if (isOpenPalm) return 'openPalm';
+
+  const isFist = isHandClosed(hand);
+  const isOpenPalm = isHandOpen(hand);
+
+  if (isFist) return 'fist';
+  if (isOpenPalm) return 'openPalm';
+
   return null;
 }
+
+
+function handleGesture(gesture) {
+  const now = Date.now();
+
+  if (gesture === currentGesture) {
+    // Če je gesta enaka prejšnji in časovno obdobje preseženo
+    if (gestureStartTime && now - gestureStartTime >= gestureHoldDuration) {
+      if (gesture === 'openPalm') {
+        window.location.href = 'index.html'; // Preusmeritev na začetno stran
+      } else if (gesture === 'fist') {
+        restartGame(); // Funkcija za ponovni začetek igre
+      }
+    }
+  } else {
+    // Če je gesta drugačna, ponastavi časovnik
+    currentGesture = gesture;
+    gestureStartTime = gesture ? now : null; // Če ni geste, ponastavi časovnik
+  }
+}
+
 
 // Camera Setup for MediaPipe
 const camera = new Camera(video, {
@@ -576,19 +622,6 @@ function startRematch() {
   startCountdown();
 }
 
-// Function to determine if the hand is a fist or open palm
-function detectGesture(hand) {
-  if (!hand) return null;
-
-  const isFist = hand.fingers.some(finger => finger.extended === false);
-  const isOpenPalm = hand.fingers.every(finger => finger.extended === true);
-
-  if (isFist) return 'fist';
-  if (isOpenPalm) return 'openPalm';
-
-  return null;
-}
-
 // Handle end-game logic with gestures
 function drawHandPosition(hands) {
   if (!hands || hands.length === 0) return;
@@ -606,24 +639,19 @@ function drawHandPosition(hands) {
       }
 }
 
-// Handle end-game logic with gestures
-function handleEndGameGesture(hands) {
-  if (!hands || hands.length === 0) return;
-
-  drawHandPosition(hands); // Dodano za prikaz pozicij rok ob koncu igre
-
-  const detectedGesture = detectGesture(hands[0]);
-
-  if (detectedGesture === 'fist') {
+// Funkcija za izvedbo dejanj na podlagi zaznane geste
+function handleEndGameGesture(gesture) {
+  if (gesture === 'openPalm') {
+    // Če je zaznana odprta dlan, preusmeri na začetno stran
+    window.location.href = 'index.html';
+  } else if (gesture === 'fist') {
+    // Če je zaznana pest, ponovno zaženi igro
     restartGame();
-  } else if (detectedGesture === 'openPalm') {
-    showMainMenu();
   }
 }
 
 // Example functions to restart game or show main menu
 function restartGame() {
-  console.log('Restarting the game...');
   score.A = 0;
   score.B = 0;
   resetBall();
@@ -633,14 +661,6 @@ function restartGame() {
   obstacle = {}; // Reset obstacles
   startCountdown(); // Add logic to reset scores, ball position, etc.
 }
-
-function showMainMenu() {
-  console.log('Returning to main menu...');
-  gameEnd = false;
-  gameActive = false;
-  // Add logic to display the main menu or reset the game state for the menu
-}
-
 
 // Game Loop
 let lastTime = 0;
@@ -656,9 +676,6 @@ function gameLoop(time) {
       if (gameEnd) {
         // Draw victory screen when game ends
         drawVictory(score.A > score.B ? 'Player A' : 'Player B');
-        if (hands){
-          handleEndGameGesture(hands);
-        }
       }
       else if (gameActive) {
           // Risanje igre, če je aktivna
