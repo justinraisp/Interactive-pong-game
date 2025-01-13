@@ -4,8 +4,37 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // Paddle and Ball Setup
-const paddleWidth = 10, paddleHeight = 180;
-const ballSize = 30;
+//const paddleWidth = 10, paddleHeight = 180;
+//const ballSize = 30;
+
+// Funkcija za prilagoditev velikosti glede na zaslon
+function adjustSize() {
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+
+  // Nastavimo širino in višino loparja kot del širine zaslona
+  const paddleWidth = screenWidth * 0.006; // 2% širine zaslona
+  const paddleHeight = screenHeight * 0.25; // 20% višine zaslona
+
+  // Nastavimo velikost žoge kot del širine zaslona
+  const ballSize = screenWidth * 0.028; // 5% širine zaslona
+
+  const obstacleWidth = screenWidth * 0.0036;
+  const obstacleHeight = screenHeight * 0.2;
+
+  return { paddleWidth, paddleHeight, ballSize, obstacleWidth, obstacleHeight };
+}
+
+// Klic funkcije za inicializacijo velikosti
+const { paddleWidth, paddleHeight, ballSize, obstacleWidth,obstacleHeight } = adjustSize();
+
+
+// Funkcija za prilagoditev velikosti ob spremembi velikosti okna
+window.addEventListener('resize', function() {
+  const { paddleWidth, paddleHeight, ballSize, obstacleWidth,obstacleHeight } = adjustSize();
+  // Posodobi lastnosti igre z novimi vrednostmi
+});
+
 
 let selectedSpeed = localStorage.getItem("pongSpeed") || 'medium'; // Privzeta hitrost je 'medium'
 let leftPlayerFunction = localStorage.getItem("leftPlayerFunction");
@@ -64,12 +93,12 @@ function setBallSpeed() {
 setBallSpeed();
 
 
+
+
 ////////////////////////////
 // Ovire 
 
 let obstacle = {};  // Seznam ovir
-const obstacleWidth = 5;
-const obstacleHeight = 150;
 const obstacleSpeed = 1; // Hitrost gibanja ovir navzdol
 let obstacleHit = false; // Ali je žoga zadela oviro
 
@@ -465,7 +494,7 @@ function applySpecialEffect(effectType, ball, paddle) {
       ball.dx = Math.sign(ball.dx) * speed * 1.25;
       setTimeout(() => {
         invisible = false;  // Po 1 sekundi nastavimo žogo spet na vidno
-    }, 14000/speed);
+    }, 13500/speed);
   }
 }
 
