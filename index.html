@@ -7,7 +7,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom, #1a2a6c, #b21f1f, #fdbb2d);
+            background: url('images/background1.jpg') no-repeat center center fixed;
+            background-size: cover;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -41,37 +42,104 @@
             background-color: #b21f1f;
         }
         .selected {
-            background-color: #b21f1f !important; /* Obarvana izbrana hitrost */
+            background-color: #b21f1f !important;
             color: #fff !important;
         }
-          .functionality-container {
-      display: flex;
-      justify-content: center; /* Centriraj vsebino horizontalno */
-      margin-top: 20px;
-  }
+        .functionality-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
 
-  .functionality-column {
-      width: 45%;
-      text-align: left;
-      display: flex;
-      flex-direction: column;
-      justify-content: center; /* Centriraj vsebino znotraj vsakega bloka */
-      align-items: center; /* Poravnava vsebine na sredino znotraj vsakega bloka */
-      padding: 10px; /* Doda nekaj prostora okoli vsebine */
-  }
-  .functionality-option {
-    margin-top: 10px;
-    font-size: 18px;
-    display: flex;
-    justify-content: center; /* Poravnava izbirne opcije na sredino */
-}
+        .functionality-column {
+            width: 45%;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
 
-select {
-    font-size: 18px;
-    margin: 5px;
-    width: 100%; /* Da bo select gumb širši in poravnan */
-    max-width: 200px; /* Omejitev širine select polja */
-}
+        .functionality-option {
+            margin-top: 10px;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+        }
+
+        select {
+            font-size: 18px;
+            margin: 5px;
+            width: 100%;
+            max-width: 200px;
+        }
+
+        /* Stil za ikono informacij v desnem spodnjem kotu */
+        .info-icon {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #fdbb2d;
+            color: white;
+            border-radius: 50%;
+            font-size: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Stil za popup okno */
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: justify;
+        }
+
+        .popup h2 {
+            text-align: center;
+        }
+
+        .popup p {
+            margin: 20px 0;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .popup button {
+            width: 100%;
+            background-color: #fdbb2d;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .popup button:hover {
+            background-color: #b21f1f;
+        }
+        .popup ul {
+            margin-top: 5px; /* Zmanjšanje razmika pred naštevanjem */
+            padding-left: 10px; /* Zmanjšanje razmika na levi strani alinej */
+        }
+
+        .popup li {
+            margin-bottom: 5px; /* Zmanjšanje razmika med alinejami */
+        }
     </style>
 </head>
 <body>
@@ -86,9 +154,7 @@ select {
 
         <br><br>
         <p>Select a unique functionality for each player:</p>
-        <!-- Left and Right Player Functionality Selections -->
         <div class="functionality-container">
-            <!-- Left Player Functionalities -->
             <div class="functionality-column">
                 <h3>Left Player:</h3>
                 <div class="functionality-option">
@@ -100,7 +166,6 @@ select {
                 </div>
             </div>
 
-            <!-- Right Player Functionalities -->
             <div class="functionality-column">
                 <h3>Right Player:</h3>
                 <div class="functionality-option">
@@ -114,20 +179,69 @@ select {
         </div>
 
         <br><br>
+        <p>Select target score:</p>
+        <div class="functionality-option">
+            <select id="targetScore">
+                <option value="3">3 Points</option>
+                <option value="5">5 Points</option>
+                <option value="7" selected>7 Points</option>
+                <option value="11">11 Points</option>
+            </select>
+        </div>
+
+        <br><br>
         <button onclick="startPong()">Start Game</button>
     </div>
 
+    <!-- Ikona za informacije -->
+    <div class="info-icon" onclick="togglePopup()">i</div>
+
+    <!-- Popup okno -->
+    <div id="popup" class="popup">
+      <h2>Game information</h2>
+      <p style="text-align: justify;">This is a classic Pong game where your goal is to hit the ball past your opponent's paddle. You can customize the game with the following options:</p>
+      
+      <ul>
+          <li><strong>ball speed:</strong> choose between slow, medium, or fast,</li>
+          <li><strong>special abilities:</strong> Select abilities like faster hit or invisible ball,</li>
+          <li><strong>target score:</strong> Set a target score (3, 5, 7, or 11 points).</li>
+      </ul>
+  
+      <p style="text-align: justify;"><strong>Player Controls:</strong> Move your paddle using your <strong>index finger</strong> up and down.</p>
+      <p style="text-align: justify;"><strong>Beware:</strong></p>
+      <ul>
+          <li><strong>throughout the game, obstacles may appear that alter the trajectory of the ball,</li>
+          <li><strong>every 5 hits, the ball speed will increase to make the game more challenging!</li>
+      </ul>
+  
+      <button onclick="closePopup()">Close</button>
+  </div>
+  
+  
+
     <script>
-        let selectedSpeed = '';
+        let selectedSpeed = 'medium'; // Default speed is medium
         let leftPlayerFunction = '';
         let rightPlayerFunction = '';
+        let targetScore = '7'; // Default value for target score
 
-        // Function to handle speed selection
+        // Funkcija za prikaz popup okna
+        function togglePopup() {
+            let popup = document.getElementById('popup');
+            popup.style.display = (popup.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // Funkcija za zapiranje popup okna
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        // Funkcija za izbiro hitrosti
         function selectSpeed(speed) {
             selectedSpeed = speed;
             console.log("Selected speed: " + selectedSpeed);
 
-            // Reset all buttons and add 'selected' class to the clicked button
+            // Resetiranje vseh gumbov in dodajanje 'selected' razreda kliknjenemu gumbu
             document.getElementById('slowBtn').classList.remove('selected');
             document.getElementById('mediumBtn').classList.remove('selected');
             document.getElementById('fastBtn').classList.remove('selected');
@@ -141,29 +255,30 @@ select {
             }
         }
 
-        // Function to handle functionality selection
+        // Funkcija za izbiro funkcionalnosti
         function selectFunctionalities() {
-            // Left Player
             leftPlayerFunction = document.getElementById('leftFunction').value;
-            // Right Player
             rightPlayerFunction = document.getElementById('rightFunction').value;
+            targetScore = document.getElementById('targetScore').value;
         }
 
-        // Function to start the Pong game and pass the settings to it
+        // Funkcija za začetek igre
         function startPong() {
             if (selectedSpeed === '') {
                 alert("Please select a speed before starting the game!");
             } else {
-                // Select functionalities for both players
                 selectFunctionalities();
-
-                // Store settings in localStorage
                 localStorage.setItem("pongSpeed", selectedSpeed);
                 localStorage.setItem("leftPlayerFunction", leftPlayerFunction);
                 localStorage.setItem("rightPlayerFunction", rightPlayerFunction);
-
-                window.location.href = "pong.html"; // Redirect to Pong game
+                localStorage.setItem("targetScore", targetScore); // Shrani ciljno število
+                window.location.href = "pong.html"; // Preusmeri na igro Pong
             }
+        }
+
+        // Nastavite privzeto hitrost na nalaganju strani
+        window.onload = function() {
+            selectSpeed(selectedSpeed);
         }
     </script>
 </body>

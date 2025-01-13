@@ -18,6 +18,7 @@ let ball = { x: canvas.width / 2, y: canvas.height / 2, dx: 5, dy: 5, size: ball
 let score = { A: 0, B: 0 };
 let paddleAHit = false; // Ali je bila žoga zadeta z levim loparjem
 let paddleBHit = false; // Ali je bila žoga zadeta z desnim loparjem
+let numberOfHits = 0; // Število zadetkov
 
 let paddleA_previousY = paddleA.y; // Prejšnja pozicija za levi lopar
 let paddleB_previousY = paddleB.y; // Prejšnja pozicija za desni lopar
@@ -39,9 +40,12 @@ let gestureStartTime = null; // Čas začetka zaznavanja geste
 const gestureHoldDuration = 3000; // Trajanje v milisekundah (3 sekunde)
 const wiggleRoom = 50; // Prostor za odmik od roba zaslona
 const cropPercentage = 0.8;
+const delayGesture = 3000; // Zamik za zaznavanje geste
+let delayPassed = false;
 
 const hitSound = new Audio('sounds/hit.mp3');
 const wallSound = new Audio('sounds/wall.wav');
+const victorySound = new Audio('sounds/victory.mp3');
 
 const speedOptions = {
   slow: 4,   // Počasna hitrost
@@ -49,7 +53,8 @@ const speedOptions = {
   fast: 10    // Hitro hitrost
 };
 
-const speed = speedOptions[selectedSpeed];
+let speed = speedOptions[selectedSpeed];
+let startSpeed = speedOptions[selectedSpeed];
 
 function setBallSpeed() {
   ball.dx = speed * (Math.random() < 0.5 ? 1 : -1); // Negativni ali pozitivni smeri
@@ -253,11 +258,8 @@ function isHandClosed(landmarks) {
   ) {
     return true; // Zaprta roka (pest)
   }
-
   return false; // Roka ni zaprta v pest
 }
-
-
 
 // Hand Tracking Logic
 hands.onResults((results) => {
@@ -277,7 +279,6 @@ hands.onResults((results) => {
   }
   fingersDetected = detectedFingers.length;
   handsDetected = detectedHands.length;
-  console.log(gameEnd)
   if (fingersDetected === 2 && !gameActive && !countdownActive && !gameEnd) {
     startCountdown(); // Začni odštevanje
   }
@@ -285,8 +286,8 @@ hands.onResults((results) => {
     updatePaddlePosition(paddleA, detectedFingers, paddleA.x, canvas.height, true,cropPercentage);  // Levi lopar
     updatePaddlePosition(paddleB, detectedFingers, paddleB.x, canvas.height, false,cropPercentage); // Desni lopar
   }
-  else if(gameEnd && handsDetected > 0){
-    drawHandPosition(detectedHands.slice(0,21));
+  else if(gameEnd && handsDetected > 0 && delayPassed){
+    //drawHandPosition(detectedHands.slice(0,21));
     const gesture = detectHandGesture(Hands[0]);
     handleGesture(gesture);
     return
@@ -299,22 +300,29 @@ hands.onResults((results) => {
   drawFingerPositions(detectedFingers,true);
 });
 
+function delay(delayTime) {
+  // Preverimo, ali je delay že minil
+  if (!delayPassed) {
+    // Nastavimo časovni zamik
+    setTimeout(() => {
+      delayPassed = true;
+    }, delayTime); // delayTime je časovni zamik v milisekundah
+  }
+}
+
 function detectHandGesture(hand) {
   if (!hand) return null;
 
   const isFist = isHandClosed(hand);
   const isOpenPalm = isHandOpen(hand);
-
   if (isFist) return 'fist';
   if (isOpenPalm) return 'openPalm';
-
   return null;
 }
 
 
 function handleGesture(gesture) {
   const now = Date.now();
-
   if (gesture === currentGesture) {
     // Če je gesta enaka prejšnji in časovno obdobje preseženo
     if (gestureStartTime && now - gestureStartTime >= gestureHoldDuration) {
@@ -344,7 +352,6 @@ camera.start();
 
 
 function startCountdown() {
-  console.log("Začenjam odštevanje.");
   countdownActive = true;
   countdown = 3; // Začetno število sekund
   countdownTimer = setInterval(() => {
@@ -353,7 +360,6 @@ function startCountdown() {
           clearInterval(countdownTimer);
           countdownActive = false;
           gameActive = true; // Aktiviraj igro
-          console.log("Odštevanje končano! Začnemo z igro.");
       }
   }, 1000);
 }
@@ -380,10 +386,10 @@ function drawBall() {
 }
 
 function drawScores() {
-    ctx.font = '48px Arial';
+    ctx.font = '52px Arial';
     ctx.fillStyle = '#fff';
-    ctx.fillText(score.A, canvas.width / 4, 50);
-    ctx.fillText(score.B, (3 * canvas.width) / 4, 50);
+    ctx.fillText(score.A, canvas.width / 3, 70);
+    ctx.fillText(score.B, (2 * canvas.width) / 3, 70);
 }
 
 function drawWaitingMessage(hands,time) {
@@ -391,13 +397,13 @@ function drawWaitingMessage(hands,time) {
         ctx.font = '48px Arial';
         ctx.fillStyle = 'red';
         ctx.textAlign = 'center';
-        ctx.fillText(`Game starts in ${time}...`, canvas.width / 2, canvas.height / 2);
+        ctx.fillText(`Game starts in ${time}...`, canvas.width / 2, canvas.height / 2 - 50);
     }
     else {
       ctx.font = '48px Arial';
       ctx.fillStyle = 'red';
       ctx.textAlign = 'center';
-      ctx.fillText("Waiting for both hands...", canvas.width / 2, canvas.height / 2);
+      ctx.fillText("Waiting for both hands...", canvas.width / 2, canvas.height / 2 - 50);
     }
 }
 
@@ -405,7 +411,12 @@ function drawVictory(winner) {
   ctx.font = '48px Arial';
   ctx.fillStyle = 'red';
   ctx.textAlign = 'center';
-  ctx.fillText(`VICTORY! ${winner} won`, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(`VICTORY!`, canvas.width / 2, canvas.height / 3);
+  ctx.fillText(`${winner} won`, canvas.width / 2, canvas.height / 2);
+  ctx.font = '24px Arial';
+  ctx.fillStyle = 'white';
+  ctx.fillText("Make a fist for 3 seconds for a rematch", canvas.width / 2, canvas.height / 2 + 60);
+  ctx.fillText("Make an open hand for 3 seconds to go to main menu", canvas.width / 2, canvas.height / 2 + 100);
 }
 
 
@@ -447,7 +458,6 @@ function drawPaddle(paddle) {
 
 // Funkcija za posebne učinke (hitrejši udarec, spin, nevidna žoga, naključna smer)
 function applySpecialEffect(effectType, ball, paddle) {
-  console.log("Applying special effect:", effectType); // Odstrani "upper/lower"
   if (effectType === 'fasterHit') {
       ball.dx = Math.sign(ball.dx) * speed * 2.5; // Povečaj hitrost žoge
   } else if (effectType === 'invisibleBall') {
@@ -469,7 +479,6 @@ function checkPaddleCollision(paddle) {
       const relativeY = ball.y - paddleA.y;
 
       if (relativeY > segmentHeight && relativeY < 2 * segmentHeight) {
-          console.log("Sredinski del loparja (levo)");
           applySpecialEffect(leftPlayerFunction, ball, 'left');
       }
       else {
@@ -486,7 +495,6 @@ function checkPaddleCollision(paddle) {
       const relativeY = ball.y - paddleB.y;
 
       if (relativeY > segmentHeight && relativeY < 2 * segmentHeight) {
-          console.log("Sredinski del loparja (desno)");
           applySpecialEffect(rightPlayerFunction, ball, 'right');
       }
       else {
@@ -545,6 +553,10 @@ function update() {
       hitSound.play();
       ball.dx *= -1; // Obrne horizontalno smer žoge
       Math.random() < 0.5 ? ball.dy *= 0.92 : ball.dy /= 0.92;
+      numberOfHits++;
+      if (numberOfHits % 5 == 0) {
+        speed *= 1.15; // Povečaj hitrost žoge vsakih 5 udarcev
+      }
 
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleA.height / 3;
@@ -555,6 +567,7 @@ function update() {
       } else {
           ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
       }
+      console.log(speed);
 
   }
 
@@ -568,6 +581,10 @@ function update() {
       hitSound.play();
       ball.dx *= -1; // Obrne horizontalno smer žoge
       Math.random() < 0.5 ? ball.dy *= 0.92 : ball.dy /= 0.92;
+      numberOfHits++;
+      if (numberOfHits % 5 == 0) {
+        speed *= 1.15; // Povečaj hitrost žoge vsakih 5 udarcev
+      }
 
       // Preverimo, ali je žoga zadela sredinski del loparja
       const segmentHeight = paddleB.height / 3;
@@ -578,6 +595,7 @@ function update() {
       } else {
           ball.dx = Math.sign(ball.dx) * speed; // Osveži hitrost
       }
+      console.log(speed);
   }
 
   // Scoring
@@ -586,9 +604,12 @@ function update() {
       obstacleHit = false;
       paddleAHit = false;
       paddleBHit = false;
+      speed = startSpeed; // Ponastavi hitrost
       if (score.B >= targetScore) {
         gameEnd = true;
         winner = 'Player B';
+        victorySound.play();
+        delay(delayGesture);
       }  
       resetBall();
   } else if (ball.x >= canvas.width) {
@@ -596,9 +617,12 @@ function update() {
       obstacleHit = false;
       paddleAHit = false;
       paddleBHit = false;
+      speed = startSpeed; // Ponastavi hitrost
       if (score.A >= targetScore) {
         gameEnd = true;
         winner = 'Player A';
+        victorySound.play();
+        delay(delayGesture);
       }
       resetBall();
   }
